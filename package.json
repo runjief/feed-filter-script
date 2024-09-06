@@ -1,0 +1,30 @@
+{
+  "name": "feed-filter-script",
+  "version": "1.0.0",
+  "description": "Personal Bilibili content filtering userscript",
+  "devDependencies": {
+    "@types/greasemonkey": "^4.0.2",
+    "@types/node": "^16.11.9",
+    "@typescript-eslint/eslint-plugin": "^5.4.0",
+    "@typescript-eslint/parser": "^5.4.0",
+    "autoprefixer": "^10.4.0",
+    "esbuild": "^0.13.14",
+    "eslint": "^8.2.0",
+    "eslint-config-prettier": "^8.3.0",
+    "moment": "^2.29.1",
+    "postcss": "^8.4.4",
+    "tailwindcss": "^2.2.19",
+    "ts-node": "^10.4.0",
+    "typescript": "4.5.2"
+  },
+  "scripts": {
+    "build": "ts-node-script ./scripts/build.ts"
+  },
+  "author": "runjief",
+  "license": "MIT",
+  "dependencies": {
+    "@types/lodash-es": "^4.17.5",
+    "lodash-es": "^4.17.21"
+  },
+  "private": true
+}
