@@ -17,7 +17,8 @@ import compare from "./utils/compare";
 import obtainHTMLElement from "./utils/obtainHTMLElement";
 import useGMValue from "./utils/useGMValue";
 import usePolling from "./utils/usePolling";
-
+import { render, html } from "lit-html";
+import { mdiAccountCancelOutline } from "@mdi/js";
 export {};
 
 const blockedUsers = useGMValue(
@@ -53,53 +54,87 @@ function renderActions(userID: string) {
     return;
   }
 
-  // block/unblock
-  {
-    const isBlocked = !!blockedUsers.value[userID];
-    const { el, isCreated } = obtainHTMLElement(
-      "span",
-      "89f186cd-f6ba-530d-b8b2-171f916d8888"
-    );
-    el.textContent = isBlocked ? "取消屏蔽" : "屏蔽";
-    if (isCreated) {
-      el.classList.add("h-f-btn");
-      el.addEventListener("click", (e) => {
-        e.stopPropagation();
-        const isBlocked = !!blockedUsers.value[userID];
-        blockedUsers.value = {
-          ...blockedUsers.value,
-          [userID]: !isBlocked
-            ? {
-                name: document.getElementById("h-name")?.innerText ?? "",
-                blockedAt: Date.now(),
-              }
-            : undefined,
-        };
-        renderActions(userID);
-      });
-      parent.prepend(el);
+  const container = obtainHTMLElement(
+    "div",
+    "89f186cd-f6ba-530d-b8b2-171f916d8888",
+    {
+      onCreate: (el) => {
+        el.style.display = "inline";
+        parent.append(el, parent.lastChild);
+      },
     }
+  );
+  const isBlocked = !!blockedUsers.value[userID];
+
+  render(
+    html`
+      <span
+        class="h-f-btn"
+        @click=${(e: MouseEvent) => {
+          e.stopPropagation();
+          const isBlocked = !!blockedUsers.value[userID];
+          blockedUsers.value = {
+            ...blockedUsers.value,
+            [userID]: !isBlocked
+              ? {
+                  name: document.getElementById("h-name")?.innerText ?? "",
+                  blockedAt: Date.now(),
+                }
+              : undefined,
+          };
+        }}
+      >
+        ${isBlocked ? "取消屏蔽" : "屏蔽"}
+      </span>
+    `,
+    container
+  );
+}
+
+function renderNav() {
+  const parent = document.querySelector(".right-entry");
+  if (!parent) {
+    return;
+  }
+  const container = obtainHTMLElement(
+    "li",
+    "009db887-c5b0-5de9-8f91-9bd52df60b6d",
+    {
+      onCreate: (el) => {
+        el.classList.add("right-entry-item");
+        el.style.display = "inline";
+        parent.prepend(parent.firstChild, el);
+      },
+    }
+  );
+  const count = Object.keys(blockedUsers.value).length;
+  const hidden = count === 0;
+  if (container.hidden !== hidden) {
+    container.hidden = hidden;
   }
 
-  // view list
-  {
-    const count = Object.keys(blockedUsers.value).length;
-    const { el, isCreated } = obtainHTMLElement(
-      "a",
-      "a4d8eef5-4113-5a95-a7ee-fa1f0f7c8136"
-    );
-    el.textContent = `已屏蔽 ${count}`;
-    el.hidden = count === 0;
-    if (isCreated) {
-      el.classList.add("h-f-btn");
-      el.target = "_blank";
-      el.addEventListener("click", (e) => {
-        e.stopPropagation();
-        el.href = blockedUsersURL();
-      });
-      parent.prepend(el);
-    }
-  }
+  render(
+    html`
+<button
+  type="button"
+  class="right-entry__outside" 
+  @click=${(e: Event) => {
+    e.preventDefault();
+    e.stopPropagation();
+    window.open(blockedUsersURL(), "_blank");
+  }}
+>
+  <svg width="20" height="21" viewBox="0 0 20 21" fill="none" xmlns="http://www.w3.org/2000/svg" class="right-entry-icon">
+    <path fill-rule="evenodd" clip-rule="evenodd" d=${mdiAccountCancelOutline} fill="currentColor">
+  </svg>
+  <span class="right-entry-text">
+    <span>屏蔽</span>
+    <span>(${count})</span>
+  </span>
+</button>
+`,
+    container
+  );
 }
 
 function parseUserURL(rawURL: string | undefined): string | undefined {
@@ -228,11 +263,17 @@ async function main() {
       return;
     }
     usePolling({
-      update: () => renderActions(userID),
+      update: () => {
+        renderNav();
+        renderActions(userID);
+      },
     });
   } else {
     usePolling({
-      update: () => renderVideoCard(),
+      update: () => {
+        renderNav();
+        renderVideoCard();
+      },
     });
   }
 }
