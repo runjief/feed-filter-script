@@ -137,14 +137,18 @@ function parseUserURL(rawURL: string | undefined): string | undefined {
     return;
   }
   const url = new URL(rawURL, window.location.href);
-  if (url.host !== "space.bilibili.com") {
-    return;
+  switch (url.host) {
+    case "space.bilibili.com": {
+      const match = /^\/(\d+)\/?/.exec(url.pathname);
+      if (!match) {
+        return;
+      }
+      return match[1];
+    }
+    case "cm.bilibili.com": {
+      return url.searchParams.get("space_mid") || undefined;
+    }
   }
-  const match = /^\/(\d+)\/?/.exec(url.pathname);
-  if (!match) {
-    return;
-  }
-  return match[1];
 }
 
 function parseVideoURL(rawURL: string | undefined) {
@@ -175,9 +179,11 @@ function renderVideoList() {
       return;
     }
     const isBlocked = !!blockedUsers.value[userID];
-    const container = i.parentElement?.classList.contains("video-list-item")
-      ? i.parentElement
-      : i;
+    let container = i;
+    while (container.parentElement?.childElementCount === 1) {
+      container = i.parentElement!;
+    }
+
     setHTMLElementDisplayHidden(container, isBlocked);
   });
 }
