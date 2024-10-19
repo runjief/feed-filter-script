@@ -1,14 +1,14 @@
 import injectStyle from "@/utils/injectStyle";
 import obtainHTMLElementByDataKey from "@/utils/obtainHTMLElementByDataKey";
 import { html, render } from "lit-html";
-import { mdiAccountCancelOutline } from "@mdi/js";
+import { mdiEyeOff } from "@mdi/js";
 import style from "../style";
-import blockedUsers from "../models/blockedUsers";
+import homePageSettings from "../models/homePageSettings";
 
-export default class VideoHoverButton {
+export default class HomePageFloorCardHoverButton {
   constructor(
     private readonly parentNode: Element | null | undefined,
-    private readonly user: { id: string; name: string }
+    private readonly floorCard: { channel: string }
   ) {}
 
   public readonly render = () => {
@@ -16,7 +16,7 @@ export default class VideoHoverButton {
     if (!parentNode) {
       return;
     }
-    const key = "27f729f8-7063-514b-a702-df558e292e4e";
+    const key = "472821bb-8616-5179-90b6-5a38b0cf4428";
     injectStyle(
       key,
       `\
@@ -45,16 +45,19 @@ export default class VideoHoverButton {
       html`
 <button
   type="button"
-  title="屏蔽此用户"
+  title="屏蔽此频道的楼层卡片"
   class="absolute top-2 left-2 rounded-md cursor-pointer text-white bg-[rgba(33,33,33,.8)] z-20 border-none"
   @click=${(e: Event) => {
     e.preventDefault();
     e.stopPropagation();
-    blockedUsers.add(this.user);
+    homePageSettings.floorCard.excludeByChannel = [
+      ...homePageSettings.floorCard.excludeByChannel,
+      this.floorCard.channel,
+    ];
   }}
 >
-  <svg viewBox="-3 -1 28 28" class="h-7 fill-current">
-    <path fill-rule="evenodd" clip-rule="evenodd" d=${mdiAccountCancelOutline}>
+  <svg viewBox="-2 -2 28 28" class="h-7 fill-current">
+    <path fill-rule="evenodd" clip-rule="evenodd" d=${mdiEyeOff}>
   </svg>
 </button>
     `,

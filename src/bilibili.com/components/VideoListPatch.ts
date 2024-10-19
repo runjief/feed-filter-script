@@ -1,12 +1,12 @@
 import setHTMLElementDisplayHidden from "@/utils/setHTMLElementDisplayHidden";
-import blockedUsers from "../models/blockedUsers";
 import parseUserURL from "../utils/parseUserURL";
 import VideoHoverButton from "./VideoHoverButton";
+import videoListSettings from "../models/videoListSettings";
 
 // spell-checker: word bili
 
 export default class VideoListPatch {
-  public render() {
+  public readonly render = () => {
     document.querySelectorAll<HTMLElement>(".bili-video-card").forEach((i) => {
       const rawURL = i
         .querySelector("a.bili-video-card__info--owner")
@@ -15,26 +15,32 @@ export default class VideoListPatch {
         return;
       }
       const user = parseUserURL(rawURL);
-      if (!user) {
-        return;
+      let hidden = false;
+      if (user) {
+        const duration =
+          i
+            .querySelector(".bili-video-card__stats__duration")
+            ?.textContent?.trim() ?? "";
+        hidden = videoListSettings.shouldExcludeVideo({ user, duration });
+      } else {
+        // assume advertisement
+        hidden = !videoListSettings.allowAdvertisement;
       }
-      const isBlocked = blockedUsers.has(user.id);
+
       let container = i;
       while (container.parentElement?.childElementCount === 1) {
         container = container.parentElement;
       }
 
-      setHTMLElementDisplayHidden(container, isBlocked);
-      if (!isBlocked) {
+      setHTMLElementDisplayHidden(container, hidden);
+      if (user && !hidden) {
         new VideoHoverButton(i.querySelector(".bili-video-card__image--wrap"), {
           id: user.id,
           name:
-            i
-              .querySelector(".bili-video-card__info--author")
-              // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
-              ?.getAttribute("title") || user.id,
+            i.querySelector(".bili-video-card__info--author")?.textContent ||
+            user.id,
         }).render();
       }
     });
-  }
+  };
 }

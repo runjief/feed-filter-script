@@ -1,5 +1,5 @@
 import obtainHTMLElementByID from "@/utils/obtainHTMLElementByID";
-import { mdiAccountCancelOutline } from "@mdi/js";
+import { mdiAccountCancelOutline, mdiEyeOffOutline } from "@mdi/js";
 import { render, html, nothing } from "lit-html";
 import isNonNull from "@/utils/isNonNull";
 import style from "../style";
@@ -13,7 +13,7 @@ export default class NavButton {
     this.settings = settings;
   }
 
-  public render() {
+  public readonly render = () => {
     const parent = document.querySelector(".right-entry");
     if (!parent) {
       return;
@@ -40,15 +40,12 @@ export default class NavButton {
   }}
 >
   <svg viewBox="2 2 20 20" class="right-entry-icon h-5 fill-current">
-    <path fill-rule="evenodd" clip-rule="evenodd" d=${mdiAccountCancelOutline}>
+    <path fill-rule="evenodd" clip-rule="evenodd" d=${mdiEyeOffOutline}>
   </svg>
-  <span class="right-entry-text">
-    <span>屏蔽</span>
-    ${count > 0 ? html`<span>(${count})</span>` : nothing}
-  </span>
+  <span class="right-entry-text">屏蔽</span>
 </button>
 `,
       container
     );
-  }
+  };
 }

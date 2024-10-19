@@ -2,12 +2,13 @@ import setHTMLElementDisplayHidden from "@/utils/setHTMLElementDisplayHidden";
 import blockedUsers from "../models/blockedUsers";
 import parseUserURL from "../utils/parseUserURL";
 import VideoHoverButton from "./VideoHoverButton";
+import videoListSettings from "../models/videoListSettings";
 
 // spell-checker: word upname
 export default class VideoDetailPatch {
   private readonly blockedTitles = new Set<string>();
 
-  public render() {
+  public readonly render = () => {
     document
       .querySelectorAll<HTMLElement>(".video-page-card-small")
       .forEach((i) => {
@@ -16,18 +17,19 @@ export default class VideoDetailPatch {
           return;
         }
         const user = parseUserURL(rawURL);
-        if (!user) {
-          return;
+
+        let hidden = false;
+        if (user) {
+          const duration =
+            i.querySelector(".duration")?.textContent?.trim() ?? "";
+          hidden = videoListSettings.shouldExcludeVideo({ user, duration });
+        } else {
+          // assume advertisement
+          hidden = !videoListSettings.allowAdvertisement;
         }
-        const isBlocked = blockedUsers.has(user.id);
-        if (isBlocked) {
-          const title = i.querySelector(".title[title]")?.getAttribute("title");
-          if (title) {
-            this.blockedTitles.add(title);
-          }
-        }
-        setHTMLElementDisplayHidden(i, isBlocked);
-        if (!isBlocked) {
+
+        setHTMLElementDisplayHidden(i, hidden);
+        if (user && !hidden) {
           new VideoHoverButton(i.querySelector(".pic-box"), {
             id: user.id,
             name: i.querySelector(".upname .name")?.textContent || user.id,
@@ -47,5 +49,5 @@ export default class VideoDetailPatch {
         const isBlocked = this.blockedTitles.has(title);
         setHTMLElementDisplayHidden(i, isBlocked);
       });
-  }
+  };
 }

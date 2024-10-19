@@ -34,6 +34,12 @@ module.exports = {
         selector: "PrivateIdentifier",
         message: "use TypeScript visibility annotations instead",
       },
+      {
+        selector:
+          "MethodDefinition[kind=method]:matches(:not([accessibility]),[accessibility=public])",
+        message:
+          "use instance function and non-public method instead\nhttps://github.com/Microsoft/TypeScript/wiki/%27this%27-in-TypeScript#use-instance-functions",
+      },
     ],
     "import/extensions": [
       "error",
@@ -48,6 +54,7 @@ module.exports = {
     ],
     camelcase: ["error", { allow: ["^\\$_"] }],
     "no-param-reassign": ["error", { props: false }],
+    "max-classes-per-file": ["error", { ignoreExpressions: true, max: 1 }],
     // not good when implementing a interface
     "class-methods-use-this": "off",
     "require-atomic-updates": "off", // https://github.com/eslint/eslint/issues/11899
@@ -56,6 +63,7 @@ module.exports = {
       {
         accessibility: "explicit",
         overrides: {
+          methods: "off",
           constructors: "off",
           accessors: "off",
         },
@@ -65,11 +73,13 @@ module.exports = {
     "@typescript-eslint/prefer-regexp-exec": "error",
     "@typescript-eslint/prefer-nullish-coalescing": "off",
     // typescript handled rules
+    "no-use-before-define": "off",
     "grouped-accessor-pairs": "off",
     "no-shadow": "off",
     "no-useless-constructor": "off",
     "no-unused-vars": "off",
     "no-undef": "off",
+    "no-continue": "off",
     "no-empty-function": "off",
     "consistent-return": "off",
     "vue/return-in-computed-property": "off",
