@@ -14,6 +14,7 @@
     "eslint-config-prettier": "^8.8.0",
     "eslint-import-resolver-typescript": "^3.5.5",
     "eslint-plugin-import": "^2.27.5",
+    "eslint-plugin-internal": "link:scripts/eslint-plugin-internal",
     "eslint-plugin-prettier": "^4.2.1",
     "moment": "^2.29.1",
     "postcss": "^8.4.19",
@@ -25,7 +26,8 @@
     "typescript": "5.1.3"
   },
   "scripts": {
-    "build": "ts-node-script ./scripts/build.ts"
+    "build": "ts-node-script ./scripts/build.ts",
+    "dev": "ts-node ./scripts/build.ts --watch"
   },
   "author": "runjief",
   "license": "MIT",

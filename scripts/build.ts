@@ -1,60 +1,34 @@
-import { build } from "esbuild";
-import { readFile, readdir, stat } from "fs/promises";
-import { createHash } from "crypto";
+import { context } from 'esbuild';
+import { readFile, readdir, stat } from 'fs/promises';
+import { createHash } from 'crypto';
 
-import { execSync } from "child_process";
-import * as moment from "moment";
-import { join } from "path";
-import path = require("path");
-const METADATA_START = "// ==UserScript==";
-const METADATA_END = "// ==/UserScript==";
+import { execSync } from 'child_process';
+import * as moment from 'moment';
+import * as fs from 'fs/promises';
+import * as pathLib from 'path';
+
+const METADATA_START = '// ==UserScript==';
+const METADATA_END = '// ==/UserScript==';
 
 function shell(command) {
   return execSync(command).toString().trimEnd();
 }
 
-function autoVersion(p: string): string {
-  let date = new Date(parseInt(shell(`git log -1 --pretty=%at ${p}`)) * 1e3);
+function autoVersion(p: string[]): string {
+  let date = new Date(
+    parseInt(shell(`git log -1 --pretty=%at ${p.join(' ')}`)) * 1e3
+  );
   if (!Number.isFinite(date.getTime())) {
     console.warn(`can not get commit date: ${p}`);
     date = new Date();
   }
 
-  return moment(date).format("YYYY.MM.DD");
-}
-
-async function getMetadataBlock(p: string): Promise<string> {
-  const content = await readFile(p);
-  const lines: string[] = [];
-  let started = false;
-  let versionLine = `// @version   ${autoVersion(p)}`;
-  for (const line of content.toString().split(/\r?\n/)) {
-    if (line === METADATA_START) {
-      started = true;
-      continue;
-    }
-    if (line === METADATA_END) {
-      break;
-    }
-    if (started && line.startsWith("//")) {
-      if (line.startsWith("// @version")) {
-        versionLine = line;
-      } else {
-        lines.push(line);
-      }
-    }
-  }
-
-  // add hash to version
-  const hash = createHash("sha256").update(content).digest("hex").slice(0, 8);
-  lines.push(versionLine.trim() + `+${hash}`);
-
-  return [METADATA_START, ...lines, METADATA_END].join("\n") + "\n";
+  return moment(date).format('YYYY.MM.DD');
 }
 
 async function walk(root: string, cb: (path: string) => Promise<void>) {
   for (const i of await readdir(root)) {
-    const p = path.join(root, i);
+    const p = pathLib.join(root, i);
     const s = await stat(p);
     if (s.isDirectory()) {
       await walk(p, cb);
@@ -65,65 +39,140 @@ async function walk(root: string, cb: (path: string) => Promise<void>) {
 }
 
 function workspacePath(...parts: string[]): string {
-  return path.resolve(__dirname, "..", ...parts);
+  return pathLib.resolve(__dirname, '..', ...parts);
 }
 
 (async () => {
-  const root = workspacePath("src");
+  const root = workspacePath('src');
+  const entryPoints: string[] = [];
   await walk(root, async (entry) => {
-    if (!entry.endsWith(".user.ts")) {
+    if (!entry.endsWith('.user.ts')) {
       return;
     }
-    // spell-checker: word outfile
-    const outfile = workspacePath(
-      "dist",
-      `${path.relative(root, entry).slice(0, -3)}.js`
-    );
-    const res = await build({
-      entryPoints: [entry],
-      banner: { js: await getMetadataBlock(entry) },
-      bundle: true,
-      treeShaking: true,
-      target: "es2015",
-      outfile,
-      charset: "utf8",
-      plugins: [
-        {
-          name: "lit-html",
-          setup(build) {
-            build.onResolve({ filter: /^lit-html$/ }, async (v) => {
-              return {
-                path: workspacePath(
-                  "node_modules",
-                  "lit-html",
-                  "development",
-                  "lit-html.js"
-                ),
-              };
-            });
-            build.onLoad({ filter: /[\/\\]lit-html.js$/ }, async ({ path }) => {
-              const source = await readFile(path, "utf-8");
-              return {
-                contents: source.replace(
-                  "const DEV_MODE = true",
-                  "const DEV_MODE = false"
-                ),
-              };
-            });
-          },
-        },
-      ],
-      loader: {
-        ".html": "text",
-        ".css": "text",
-      },
-    });
-    res.warnings.forEach((i) => {
-      console.warn(i);
-    });
-    res.errors.forEach((i) => {
-      console.error(i);
-    });
-    console.log(path.relative(root, outfile));
+    entryPoints.push(entry);
   });
+  // spell-checker: word outdir
+  const ctx = await context({
+    entryPoints,
+    bundle: true,
+    treeShaking: true,
+    target: 'es2015',
+    outdir: workspacePath('dist'),
+    write: false,
+    metafile: true,
+    charset: 'utf8',
+    plugins: [
+      {
+        name: 'lit-html',
+        setup(build) {
+          build.onResolve({ filter: /^lit-html$/ }, async () => {
+            return {
+              path: workspacePath(
+                'node_modules',
+                'lit-html',
+                'development',
+                'lit-html.js'
+              ),
+            };
+          });
+          build.onLoad({ filter: /[\/\\]lit-html.js$/ }, async ({ path }) => {
+            const source = await readFile(path, 'utf-8');
+            return {
+              contents: source.replace(
+                'const DEV_MODE = true',
+                'const DEV_MODE = false'
+              ),
+            };
+          });
+        },
+      },
+      {
+        name: 'save',
+        setup(build) {
+          build.onEnd(async (res) => {
+            res.warnings.forEach((i) => {
+              console.warn(i);
+            });
+            res.errors.forEach((i) => {
+              console.error(i);
+            });
+            await Promise.all(
+              res.outputFiles.map(async ({ text, path }, index) => {
+                const hash = createHash('sha256')
+                  .update(text)
+                  .digest('hex')
+                  .slice(0, 8);
+                const entry = entryPoints[index];
+                const relPath = pathLib
+                  .relative(workspacePath(), path)
+                  .replace(/\\/g, '/');
+                const entryContent = await fs.readFile(entry, {
+                  encoding: 'utf-8',
+                });
+                const data = Array.from(
+                  (function* () {
+                    for (const i of (function* () {
+                      enum CursorPosition {
+                        BEFORE_METADATA,
+                        METADATA,
+                      }
+                      let pos = CursorPosition.BEFORE_METADATA;
+                      let hasVersion = false;
+                      for (const line of entryContent.split(/\r?\n/)) {
+                        if (pos === CursorPosition.BEFORE_METADATA) {
+                          if (line === METADATA_START) {
+                            yield line;
+                            pos = CursorPosition.METADATA;
+                          }
+                        } else if (pos === CursorPosition.METADATA) {
+                          if (line === METADATA_END) {
+                            if (!hasVersion) {
+                              yield `// @version   ${autoVersion(
+                                Object.keys(
+                                  res.metafile.outputs[relPath].inputs
+                                ).filter((i) => !i.startsWith('node_modules/'))
+                              )}+${hash}`;
+                            }
+                            yield line;
+                            return;
+                          } else if (line.startsWith('// @version')) {
+                            hasVersion = true;
+                            yield line.trim() + '+' + hash;
+                          } else {
+                            yield line;
+                          }
+                        }
+                      }
+                    })()) {
+                      yield i + '\n';
+                    }
+                    yield '\n';
+                    yield text;
+                  })()
+                );
+                console.log(relPath);
+                await fs.mkdir(pathLib.dirname(path), { recursive: true });
+                await fs.writeFile(path, data, {
+                  encoding: 'utf-8',
+                  flag: 'w',
+                });
+              })
+            );
+          });
+        },
+      },
+    ],
+    loader: {
+      '.html': 'text',
+      '.css': 'text',
+    },
+  });
+  if (process.argv.includes('--watch')) {
+    await ctx.watch();
+    // run forever
+    await new Promise(() => undefined);
+  } else {
+    await ctx.rebuild();
+  }
+  await ctx.dispose();
 })();
